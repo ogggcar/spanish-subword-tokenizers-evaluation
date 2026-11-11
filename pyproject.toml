@@ -1,0 +1,117 @@
+# Poetry pyproject.toml: https://python-poetry.org/docs/pyproject/
+
+[build-system]
+requires = ["poetry_core>=1.6.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "spanish-subwords-evaluation"
+version = "0.1.0"
+description = "template"
+readme = "README.md"
+authors = [
+    "Óscar García Sierra",
+]
+
+# Keywords description https://python-poetry.org/docs/pyproject/#keywords
+keywords = ["embedddings"]
+
+[tool.poetry.scripts]
+
+start = "env PYTHONPATH=C:/Users/ockap/OneDrive/Escritorio/spanish-morph-embeddings python main.py"
+
+# Entry points for the package https://python-poetry.org/docs/pyproject/#scripts
+
+[tool.poetry.dependencies]
+python = "3.9"
+pandas = "^2.1.1"
+spacy = "^3.7.2"
+morfessor = "^2.0.6"
+morfessor-flatcat = "^1.0.8"
+transformers = "^4.35.2"
+es-core-news-sm = {url = "https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.7.0/es_core_news_sm-3.7.0.tar.gz"}
+
+
+[tool.poetry.group.dev.dependencies]
+
+
+[tool.black]
+# https://github.com/psf/black
+line-length = 120
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-p no:cacheprovider -s"
+testpaths = ["Tests"]
+console_output_style = "count"
+filterwarnings = ["ignore::DeprecationWarning"]
+asyncio_mode = "auto"
+markers = [
+    "unit: tests that can be executed without any external dependency (select with '-m \"unit\"')",
+    "paid: tests that cost money to execute (deselect with '-m \"not paid\"')"
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+# --strict
+disallow_any_generics = false
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+implicit_reexport = false
+strict_equality = true
+# --strict end
+
+[tool.ruff]
+# Enable the pycodestyle (`E`) and Pyflakes (`F`) rules by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+# select = ["E", "F", "I"]
+extend-select = ["F", "C90", "S", "I", "B", "TRY", "UP", "RUF", "C4", "DJ", "RET", "PT", "SIM", "INT", "ARG", "PTH", "E"]
+ignore = []
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+per-file-ignores = {}
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Assume Python 3.8
+target-version = "py311"
+line-length = 120

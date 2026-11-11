@@ -1,3 +1,6 @@
+data/2. morph_coherence.json filter=lfs diff=lfs merge=lfs -text
+data/2. morph_coherence/suffixes_parte_1.json filter=lfs diff=lfs merge=lfs -text
+data/2. morph_coherence/suffixes_parte_2.json filter=lfs diff=lfs merge=lfs -text
 data/2.[[:space:]]morph_coherence.json filter=lfs diff=lfs merge=lfs -text
 data/2.[[:space:]]morph_coherence/suffixes_parte_1.json filter=lfs diff=lfs merge=lfs -text
 data/2.[[:space:]]morph_coherence/suffixes_parte_2.json filter=lfs diff=lfs merge=lfs -text

@@ -1,242 +1,190 @@
-import re
-from collections import Counter
-import pandas as pd
+from pathlib import Path
+from typing import Optional
 
-import tqdm
 from transformers import AutoTokenizer
 
-from src.utils import load_json, dump_json, calculate_metrics, post_process, eliminar_repetidos, corregir_segmentacion, load_all_json_parts
+from src.utils import calculate_metrics, dump_json, load_all_json_parts, load_json, post_process
+
 
 class MorphologicalEvaluator:
+    def __init__(
+        self,
+        tokenizers_paths: list[str],
+        data_dir: Optional[Path] = None,
+        results_dir: Optional[Path] = None,
+    ):
+        repository_root = Path(__file__).resolve().parents[1]
+        self.data_dir = data_dir or repository_root / "data"
+        self.results_dir = results_dir or repository_root / "results"
+        self.tokenizers_paths = [str(Path(path).resolve()) for path in tokenizers_paths]
 
-    def __init__(self, tokenizers_paths:list):
+        self.task1 = load_json(self.data_dir / "1. morph_relevance.json")
+        self.task2 = load_all_json_parts(self.data_dir / "2. morph_coherence")
+        self.task3 = load_json(self.data_dir / "3. morph_accuracy.json")
 
-        self.task1 = load_json('data/morph_quality.json')
-        task2_directory = "data/task2"  
-        self.task2 = load_all_json_parts(task2_directory)
-        self.task3 = load_json('data/morph_segmentation.json')
+    @staticmethod
+    def _normalize_token(tokenizer, token: str) -> str:
+        if token.startswith("##"):
+            token = token[2:]
+        decoded = tokenizer.convert_tokens_to_string([token])
+        return post_process(decoded.strip())
 
-        self.afixes = pd.read_csv('data/afixes.csv', usecols=['FORMA', 'TIPO', 'DERIVADOS'])
-        self.prefixes = self.afixes[self.afixes['TIPO'].str.startswith('pref')]['FORMA'].values.tolist()
-        self.suffixes = self.afixes[self.afixes['TIPO'].str.startswith('suf')]['FORMA'].values.tolist()
+    @staticmethod
+    def _normalize_reference_piece(piece: str) -> str:
+        if piece.startswith("##"):
+            piece = piece[2:]
+        return post_process(piece)
 
-        self.tokenizers_paths = tokenizers_paths
-               
+    def _load_tokenizer(self, path: str):
+        return AutoTokenizer.from_pretrained(path)
 
-    def eval_task1(self):
+    def _vocabulary(self, tokenizer) -> set[str]:
+        vocabulary = set()
+        for token in tokenizer.get_vocab():
+            normalized = self._normalize_token(tokenizer, token)
+            if normalized:
+                vocabulary.add(normalized)
+        return vocabulary
 
-        """morphological relevance"""
+    def eval_task1(self) -> dict:
+        """Evaluate morphological relevance against each tokenizer vocabulary."""
+        results = {}
 
-        task_1_data = self.task1  
-        
-        task_1_results = {}
+        for path in self.tokenizers_paths:
+            print(f"Evaluating relevance: {path}")
+            tokenizer = self._load_tokenizer(path)
+            vocab = self._vocabulary(tokenizer)
+            results[Path(path).name] = {
+                morph_type: calculate_metrics(morphemes, vocab)
+                for morph_type, morphemes in self.task1.items()
+            }
 
-        for path in tqdm.tqdm(self.tokenizers_paths):  
-            print(f"Evaluating {path}")
-            results = {}
-            tokenizer = AutoTokenizer.from_pretrained(path)
-            vocab = tokenizer.get_vocab()
-            vocab = list(vocab.keys())
+        self.results_dir.mkdir(parents=True, exist_ok=True)
+        dump_json(results, self.results_dir / "task_1_results.json")
+        return results
 
-            vocab = [post_process(word) for word in vocab]
-            
-            if 'bpe' in path or 'bne' in path:
-                    vocab = ["##"+element if not element.startswith("Ġ") and not element.startswith("#") else element[1:] for i, element in enumerate(vocab)]
+    def eval_task2(self) -> dict:
+        """Evaluate how often target morphemes remain intact after tokenization."""
+        results = {}
 
-            elif 'unigram' in path:    
-                vocab = ["##"+element if not element.startswith("▁") and not element.startswith("#") else element[1:] for i, element in enumerate(vocab)]
+        for path in self.tokenizers_paths:
+            tokenizer_name = Path(path).name
+            print(f"Evaluating coherence: {path}")
+            tokenizer = self._load_tokenizer(path)
+            tokenizer_results = {}
 
-            for morph_type in task_1_data:
-                
-                print(f"Evaluating {morph_type}")
-                words = task_1_data[morph_type]
-                print(f"Total datos {morph_type}:", len(words))
-                if type(words[0]) == type(words):
-                    words = [word[0] for word in words]
-                
-                metrics = calculate_metrics(words, vocab)
-                results[morph_type] = metrics
+            for morph_type, examples in self.task2.items():
+                monotoken = 0
+                multitoken_correct = 0
+                multitoken_incorrect = 0
 
-            task_1_results[path] = results
-        
-        dump_json(task_1_results, "results/task_1_results.json")
-
-
-    def eval_task2(self):
-
-        """morphological coherence"""
-
-        all_words = self.task2
-
-        task_2_results = {}
-
-        task_2_results['prefixes'] = {}
-        task_2_results['stems'] = {}
-        task_2_results['suffixes'] = {}
-        task_2_results['clitics'] = {}
-        
-        for path in tqdm.tqdm(self.tokenizers_paths):
-            print(f"Evaluating {path}")
-            tokenizer = AutoTokenizer.from_pretrained(path)
-
-            results_dict = {}
-
-            for i, morpheme_type in enumerate(all_words):
-
-                print(f"Evaluating {morpheme_type}")
-                words = all_words[morpheme_type]
-                words = eliminar_repetidos(words)
-                print(f"Total words {morpheme_type}:", len(words))
-
-                monotoken = []
-                multitoken_incorrect = []
-                multitoken_correct = []
-
-                morph_dict = {}
-                morph_dict[morpheme_type] = {}
-
-                for tuple in words:
-                    
-                    word = tuple[0]
-                    morph = tuple[1]
-                    
-                    try:
-                        tokens = tokenizer.tokenize(word)
-                    except:
-                        tokens = tokenizer.tokenize(tuple[0][0])
-
-                    if 'unigram' in path:
-                        tokens = ["##"+element if i>0 else element[1:] for i, element in enumerate(tokens)]
-                    elif 'bpe' in path or 'bne' in path:
-                        tokens = ["##"+element if i>0 else element for i, element in enumerate(tokens)]
-                        tokens = corregir_segmentacion(tokens)
-
-                    tokens = [post_process(word) for word in tokens]
+                for word, morpheme in examples:
+                    tokens = [
+                        self._normalize_token(tokenizer, token)
+                        for token in tokenizer.tokenize(word)
+                    ]
+                    normalized_morpheme = self._normalize_reference_piece(morpheme)
 
                     if len(tokens) == 1:
-                        monotoken.append([word, tokens])
+                        monotoken += 1
+                    elif normalized_morpheme in tokens:
+                        multitoken_correct += 1
                     else:
-                        if morph in tokens:
-                            multitoken_correct.append([word, tokens])
-                        else: 
-                            multitoken_incorrect.append([word, tokens])
+                        multitoken_incorrect += 1
 
-                task_2_results[f"{morpheme_type}"][f"{path}_total"] =   len(words)
-                task_2_results[f"{morpheme_type}"][f"{path}_monotoken"] =    f"{(len(monotoken)/len(words)) * 100:.2f}%"
-                task_2_results[f"{morpheme_type}"][f"{path}_multitoken correct"] =   f"{(len(multitoken_correct)/len(words)) * 100:.2f}%"
-                task_2_results[f"{morpheme_type}"][f"{path}_multitoken incorrect"] =   f"{(len(multitoken_incorrect)/len(words)) * 100:.2f}%"
-                
-                
-        dump_json(task_2_results, 'results/task_2_results.json')
+                total = len(examples)
+                tokenizer_results[morph_type] = {
+                    "total": total,
+                    "monotoken": self._percentage(monotoken, total),
+                    "multitoken_correct": self._percentage(multitoken_correct, total),
+                    "multitoken_incorrect": self._percentage(multitoken_incorrect, total),
+                }
 
+            results[tokenizer_name] = tokenizer_results
 
-    def eval_tokenizer(self, path):
+        self.results_dir.mkdir(parents=True, exist_ok=True)
+        dump_json(results, self.results_dir / "task_2_results.json")
+        return results
 
-        "morphological accuracy"
-
-        total = 0
-        wrong = []
-        correct = []
-        m = 0
-
-        l = 0
-
-        tokenizer = AutoTokenizer.from_pretrained(path)
-
-        t1 = []
-        t2 = []
-        t3 = []
-        t4 = []
-
-        vocab = tokenizer.get_vocab()
-        vocab = list(vocab.keys())
-
-        vocab = [post_process(word) for word in vocab]
-        
-        for word in self.task3:
-            
-            total += 1
-            gold_segmentations = word[1]
-            word = word[0]
-            all_segmentations = []
-            all_predictions = []
-
-            for pos_tag in gold_segmentations:
-                segmentation = gold_segmentations[pos_tag]
-                all_segmentations.append(segmentation)
-
-            all_predictions = tokenizer.tokenize(word)
-
-            l += len(all_predictions)
-
-            all_predictions = [re.sub('##', '', pred) for pred in all_predictions]
-            all_predictions = [post_process(word) for word in all_predictions]
-            all_predictions = [[re.sub('▁', '', pred) for pred in all_predictions]]
-
-            intersection = [list(sublista) for sublista in map(tuple, all_predictions) if tuple(sublista) in map(tuple, all_segmentations)]
-
-            if len(intersection) > 0:
-                correct.append((word, all_predictions))
-                if len(all_predictions[0]) == 1:
-                    m += 1
-            else:
-                wrong.append((word, all_predictions))
-
-                if len(all_predictions[0]) == 1 and len(all_segmentations[0]) > 1:
-                    t1.append((word, all_predictions))
-                elif len(all_predictions[0]) > 1 and len(all_segmentations[0]) == 1:
-                    t2.append((word, all_predictions))
-                else:
-                    type3 = False
-                    for segmentation in all_segmentations:
-                        for i, token in enumerate(all_segmentations[0]):
-                            
-                            if 'bpe' in path or "unigram" in path:
-                                token = re.sub('##', '', token)
-                            if i == 0 and 'bpe' in path:
-                                token = "Ġ"+token
-                            if i == 0 and 'unigram' in path:
-                                token = "▁"+token
-
-                            if token not in vocab:
-                                type3 = True
-                                break
-                            
-                    if type3 == True:
-                        t3.append((word, all_predictions))
-                    else:
-                        t4.append((word, all_predictions))
-
-        
+    def eval_tokenizer(self, path: str) -> tuple[float, dict]:
+        """Compare tokenizer segmentations with all gold POS-tag segmentations."""
+        tokenizer = self._load_tokenizer(path)
+        vocab = self._vocabulary(tokenizer)
+        correct = 0
         errors = {
-            1: len(t1),  
-            2: len(t2),  
-            3: len(t3),  
-            4: len(t4), 
+            "under_segmented": [],
+            "over_segmented": [],
+            "unavailable_reference_subword": [],
+            "boundary_mismatch": [],
         }
 
-        return len(correct)/total, errors  
+        for entry in self.task3:
+            word, gold_by_pos = entry
+            gold_segmentations = [
+                [self._normalize_reference_piece(piece) for piece in segmentation]
+                for segmentation in gold_by_pos.values()
+            ]
+            predicted = [
+                self._normalize_token(tokenizer, token)
+                for token in tokenizer.tokenize(word)
+            ]
 
-    def eval_task3(self):
+            if predicted in gold_segmentations:
+                correct += 1
+                continue
 
+            if len(predicted) == 1 and any(len(gold) > 1 for gold in gold_segmentations):
+                category = "under_segmented"
+            elif len(predicted) > 1 and any(len(gold) == 1 for gold in gold_segmentations):
+                category = "over_segmented"
+            elif not any(all(piece in vocab for piece in gold) for gold in gold_segmentations):
+                category = "unavailable_reference_subword"
+            else:
+                category = "boundary_mismatch"
+
+            errors[category].append(
+                {
+                    "word": word,
+                    "predicted": predicted,
+                    "gold_segmentations": gold_segmentations,
+                }
+            )
+
+        total = len(self.task3)
+        error_summary = {
+            "total": total,
+            "counts": {category: len(examples) for category, examples in errors.items()},
+            "examples": errors,
+        }
+        return (correct / total if total else 0.0), error_summary
+
+    def eval_task3(self) -> tuple[dict, dict]:
         results = {}
         all_errors = {}
 
         for path in self.tokenizers_paths:
-            print(f"Evaluating {path}")
-            score, errors = self.eval_tokenizer(path)  
-            results[path] = score
-            all_errors[path] = errors  
-        
-        dump_json(results, 'results/task_3_results.json')
-        dump_json(errors, 'results/task_3_errors.json')
+            tokenizer_name = Path(path).name
+            print(f"Evaluating accuracy: {path}")
+            score, errors = self.eval_tokenizer(path)
+            results[tokenizer_name] = {
+                "accuracy": round(score * 100, 2),
+                "correct": round(score * len(self.task3)),
+                "total": len(self.task3),
+            }
+            all_errors[tokenizer_name] = errors
 
+        self.results_dir.mkdir(parents=True, exist_ok=True)
+        dump_json(results, self.results_dir / "task_3_results.json")
+        dump_json(all_errors, self.results_dir / "task_3_errors.json")
+        return results, all_errors
 
-        return results, all_errors 
+    @staticmethod
+    def _percentage(count: int, total: int) -> str:
+        return f"{(count / total * 100) if total else 0:.2f}%"
 
-
-    def full_eval(self):
-
-        self.eval_task1()
-        self.eval_task2()
-        self.eval_task3()
+    def full_eval(self) -> dict:
+        return {
+            "morphological_relevance": self.eval_task1(),
+            "morphological_coherence": self.eval_task2(),
+            "morphological_accuracy": self.eval_task3()[0],
+        }

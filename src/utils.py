@@ -39,13 +39,18 @@ def load_text(nombre_archivo):
 
 
 def calculate_metrics(gold, vocab):
+    gold_set = set(gold)
+    vocab_set = set(vocab)
+    intersection = gold_set & vocab_set
+    precision = len(intersection) / len(vocab_set) if vocab_set else 0
+    recall = len(intersection) / len(gold_set) if gold_set else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall else 0
 
-        intersection = [element for element in gold if element in vocab]
-        precision = len(intersection) / len(vocab)
-        recall = len(intersection) / len(gold)
-        f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
-
-        return {'precision': f"{precision * 100:.2f}%", 'recall': f"{recall* 100:.2f}%", 'f1': f"{f1 * 100:.2f}%"}
+    return {
+        "precision": f"{precision * 100:.2f}%",
+        "recall": f"{recall * 100:.2f}%",
+        "f1": f"{f1 * 100:.2f}%",
+    }
     
 def post_process(word):
     d = {'Ã³': 'ó', 'ÃŃ': 'í', 'Ã¡':'á', 'Ãº':'ú', 'Ã©': 'é'}
@@ -86,6 +91,5 @@ def corregir_segmentacion(lista_segmentada):
         i += 1
 
     return nueva_lista
-
 
 

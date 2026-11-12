@@ -3,7 +3,14 @@ from typing import Optional
 
 from transformers import AutoTokenizer
 
-from src.utils import calculate_metrics, dump_json, load_all_json_parts, load_json, post_process
+from src.utils import (
+    calculate_metrics,
+    dump_json,
+    eliminar_repetidos,
+    load_all_json_parts,
+    load_json,
+    post_process,
+)
 
 
 class MorphologicalEvaluator:
@@ -54,7 +61,7 @@ class MorphologicalEvaluator:
             print(f"Evaluating relevance: {path}")
             tokenizer = self._load_tokenizer(path)
             vocab = self._vocabulary(tokenizer)
-            results[Path(path).name] = {
+            results[self._tokenizer_name(path)] = {
                 morph_type: calculate_metrics(morphemes, vocab)
                 for morph_type, morphemes in self.task1.items()
             }
@@ -68,12 +75,13 @@ class MorphologicalEvaluator:
         results = {}
 
         for path in self.tokenizers_paths:
-            tokenizer_name = Path(path).name
+            tokenizer_name = self._tokenizer_name(path)
             print(f"Evaluating coherence: {path}")
             tokenizer = self._load_tokenizer(path)
             tokenizer_results = {}
 
             for morph_type, examples in self.task2.items():
+                examples = eliminar_repetidos(examples)
                 monotoken = 0
                 multitoken_correct = 0
                 multitoken_incorrect = 0
@@ -163,12 +171,13 @@ class MorphologicalEvaluator:
         all_errors = {}
 
         for path in self.tokenizers_paths:
-            tokenizer_name = Path(path).name
+            tokenizer_name = self._tokenizer_name(path)
             print(f"Evaluating accuracy: {path}")
             score, errors = self.eval_tokenizer(path)
+            correct = len(self.task3) - sum(errors["counts"].values())
             results[tokenizer_name] = {
                 "accuracy": round(score * 100, 2),
-                "correct": round(score * len(self.task3)),
+                "correct": correct,
                 "total": len(self.task3),
             }
             all_errors[tokenizer_name] = errors
@@ -181,6 +190,11 @@ class MorphologicalEvaluator:
     @staticmethod
     def _percentage(count: int, total: int) -> str:
         return f"{(count / total * 100) if total else 0:.2f}%"
+
+    @staticmethod
+    def _tokenizer_name(path: str) -> str:
+        tokenizer_path = Path(path)
+        return f"{tokenizer_path.parent.name}/{tokenizer_path.name}"
 
     def full_eval(self) -> dict:
         return {

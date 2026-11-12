@@ -1,6 +1,6 @@
 # Evaluación morfológica de tokenizadores de subpalabras en español
 
-Este repositorio contiene el código y los datos de evaluación relacionados con el **capítulo 9 de la tesis** y con el [artículo asociado](https://docta.ucm.es/entities/publication/81cba166-925e-4053-9306-05f3dd16b3ea). El estudio compara seis tokenizadores de subpalabras en español: BPE, WordPiece y Unigram, cada uno con vocabularios de 31k y 52k.
+Este repositorio contiene el código y los datos de evaluación relacionados con el **capítulo 9 de la tesis doctoral de Óscar García Sierra** y con el [artículo asociado](https://docta.ucm.es/entities/publication/81cba166-925e-4053-9306-05f3dd16b3ea). El estudio compara seis tokenizadores de subpalabras en español: BPE, WordPiece y Unigram, cada uno con vocabularios de 31k y 52k.
 
 ## Objetivo del estudio
 
@@ -21,9 +21,9 @@ Para cada tokenizador se aplican las tres medidas mediante [`src/morphological_e
 2. **Coherencia morfológica:** tokeniza palabras que contienen prefijos, raíces, sufijos o clíticos y comprueba si la segmentación conserva el morfema evaluado. Informa proporciones de morfemas en un solo token y de segmentaciones en varios tokens, correctas o incorrectas.
 3. **Precisión morfológica:** compara las segmentaciones producidas con segmentaciones de referencia y calcula la proporción de coincidencias exactas.
 
-La lógica auxiliar para cargar datos, calcular métricas y normalizar las segmentaciones está en [`src/utils.py`](src/utils.py). Los tokenizadores guardados en las carpetas anteriores son los modelos que corresponden al estudio.
+La lógica auxiliar para cargar datos, calcular métricas y normalizar las segmentaciones está en [`src/utils.py`](src/utils.py). Los tokenizadores guardados en las carpetas anteriores son los modelos que corresponden al estudio. Ejecuta la evaluación completa desde la raíz del repositorio con `python -m src.main` (con las dependencias de [`pyproject.toml`](pyproject.toml) instaladas).
 
-**Nota sobre la ejecución actual:** [`src/main.py`](src/main.py) todavía configura el tokenizador externo de BETO y no los seis tokenizadores locales descritos arriba. Además, el evaluador busca las rutas antiguas `data/morph_quality.json`, `data/task2/` y `data/morph_segmentation.json`, que no coinciden con los nombres y ubicaciones actuales de los datos. Por tanto, el código todavía necesita actualizarse para ejecutar desde el punto de entrada la comparación de los seis tokenizadores con estos conjuntos.
+Los resultados se escriben en `results/`. El evaluador carga los conjuntos con sus nombres actuales desde `data/` y combina los JSON de `data/2. morph_coherence/`.
 
 ## Conjuntos de datos
 
@@ -39,13 +39,15 @@ Como recursos auxiliares se incluyen las tablas de [`afixes.csv`](data/afixes.cs
 
 ## Resultados de la evaluación
 
-**Los resultados no están incluidos actualmente en este repositorio.** El evaluador declara estas salidas:
+Los resultados se generan al ejecutar la evaluación y no están preincluidos en el repositorio:
 
 | Medida | Archivo de resultados esperado |
 |---|---|
 | Relevancia morfológica | `results/task_1_results.json` — resultados desglosados por tokenizador y tipo de morfema, con precisión, *recall* y F1. |
 | Coherencia morfológica | `results/task_2_results.json` — resultados desglosados por tipo de morfema y tokenizador. |
-| Precisión morfológica | `results/task_3_results.json` — puntuación agregada por tokenizador. |
+| Precisión morfológica | `results/task_3_results.json` — porcentaje de coincidencias exactas y total de casos por tokenizador. |
+
+El evaluador puede generar `results/task_3_errors.json` con recuentos y ejemplos de error para cada tokenizador. **Por el momento, este repositorio no incluye el análisis de esos errores**; el archivo generado contiene ejemplos y categorías, pero no su interpretación.
 
 
 

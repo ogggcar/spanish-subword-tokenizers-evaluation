@@ -15,15 +15,26 @@ El procedimiento evalúa los seis tokenizadores guardados en el repositorio:
 | 31k | [`subword_tokenizers_31/bpe/`](subword_tokenizers_31/bpe/) | [`subword_tokenizers_31/wordpiece/`](subword_tokenizers_31/wordpiece/) | [`subword_tokenizers_31/unigram/`](subword_tokenizers_31/unigram/) |
 | 52k | [`subword_tokenizers_52/bpe/`](subword_tokenizers_52/bpe/) | [`subword_tokenizers_52/wordpiece/`](subword_tokenizers_52/wordpiece/) | [`subword_tokenizers_52/unigram/`](subword_tokenizers_52/unigram/) |
 
-Para cada tokenizador se aplican las tres medidas mediante [`src/morphological_evaluator.py`](src/morphological_evaluator.py):
+Las tres tareas de evaluación se implementan en [`src/morphological_evaluator.py`](src/morphological_evaluator.py) y corresponden a:
 
-1. **Relevancia morfológica:** compara los morfemas de referencia con el vocabulario del tokenizador y calcula precisión, exhaustividad (*recall*) y F1 por tipo de morfema.
-2. **Coherencia morfológica:** tokeniza palabras que contienen prefijos, raíces, sufijos o clíticos y comprueba si la segmentación conserva el morfema evaluado. Informa proporciones de morfemas en un solo token y de segmentaciones en varios tokens, correctas o incorrectas.
-3. **Precisión morfológica:** compara las segmentaciones producidas con segmentaciones de referencia y calcula la proporción de coincidencias exactas.
+1. **Task 1 — Morphological relevance (relevancia morfológica):** compara los morfemas de referencia con el vocabulario del tokenizador y calcula precisión, exhaustividad (*recall*) y F1 por tipo de morfema.
+2. **Task 2 — Morphological coherence (coherencia morfológica):** tokeniza palabras que contienen prefijos, raíces, sufijos o clíticos y comprueba si la segmentación conserva el morfema evaluado. Informa proporciones de morfemas en un solo token y de segmentaciones en varios tokens, correctas o incorrectas.
+3. **Task 3 — Morphological accuracy (precisión morfológica):** compara las segmentaciones producidas con segmentaciones de referencia y calcula la proporción de coincidencias exactas.
 
-La lógica auxiliar para cargar datos, calcular métricas y normalizar las segmentaciones está en [`src/utils.py`](src/utils.py). Los tokenizadores guardados en las carpetas anteriores son los modelos que corresponden al estudio. Ejecuta la evaluación completa desde la raíz del repositorio con `python -m src.main` (con las dependencias de [`pyproject.toml`](pyproject.toml) instaladas).
+La lógica auxiliar para cargar datos, calcular métricas y normalizar las segmentaciones está en [`src/utils.py`](src/utils.py). Los tokenizadores guardados en las carpetas anteriores son los modelos que corresponden al estudio.
 
-Los resultados se escriben en `results/`. El evaluador carga los conjuntos desde `data/` y construye el conjunto de coherencia combinando los ficheros JSON divididos por tipo de morfema que se encuentran en `data/2. morph_coherence/`.
+## Evaluar los tokenizadores del repositorio
+
+Desde la raíz, instala las dependencias y ejecuta la evaluación completa:
+
+```bash
+uv sync
+uv run python -m src.main
+```
+
+La ejecución evalúa los seis tokenizadores locales y escribe sus resultados en `results/task_1_results.json`, `results/task_2_results.json` y `results/task_3_results.json`. El conjunto de coherencia se construye combinando los JSON divididos por tipo de morfema de `data/2. morph_coherence/`.
+
+## Evaluar BETO
 
 Para evaluar BETO ([`dccuchile/bert-base-spanish-wwm-uncased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-uncased)) en las tres tareas sin sobrescribir los resultados de los tokenizadores del repositorio, ejecuta desde la raíz:
 
@@ -31,7 +42,7 @@ Para evaluar BETO ([`dccuchile/bert-base-spanish-wwm-uncased`](https://huggingfa
 uv run python -m src.evaluate_beto
 ```
 
-La primera ejecución descarga el tokenizador desde Hugging Face. Se generan `results/task_1_beto_results.json`, `results/task_2_beto_results.json` y `results/task_3_beto_results.json`. La tarea 3 genera además `results/task_3_beto_errors.json`; la tarea 2 genera resultados de coherencia, no un archivo de errores.
+La primera ejecución descarga el tokenizador desde Hugging Face. Se generan `results/task_1_beto_results.json`, `results/task_2_beto_results.json` y `results/task_3_beto_results.json`.
 
 ## Conjuntos de datos
 
@@ -47,15 +58,17 @@ Como recursos auxiliares se incluyen las tablas de [`afixes.csv`](data/afixes.cs
 
 ## Resultados de la evaluación
 
-Los resultados se generan al ejecutar la evaluación y no están preincluidos en el repositorio:
+Los resultados se generan al ejecutar la evaluación y no están preincluidos en el repositorio. Los archivos de resultados principales son:
 
 | Medida | Archivo de resultados esperado |
 |---|---|
-| Relevancia morfológica | `results/task_1_results.json` — resultados desglosados por tokenizador y tipo de morfema, con precisión, *recall* y F1. |
-| Coherencia morfológica | `results/task_2_results.json` — resultados desglosados por tipo de morfema y tokenizador. |
-| Precisión morfológica | `results/task_3_results.json` — porcentaje de coincidencias exactas y total de casos por tokenizador. |
+| Tarea | Tokenizadores del repositorio | BETO |
+|---|---|---|
+| Task 1 — Relevance | `results/task_1_results.json` — precisión, *recall* y F1 por tipo de morfema. | `results/task_1_beto_results.json` |
+| Task 2 — Coherence | `results/task_2_results.json` — resultados por tipo de morfema. | `results/task_2_beto_results.json` |
+| Task 3 — Accuracy | `results/task_3_results.json` — coincidencias exactas y total de casos. | `results/task_3_beto_results.json` |
 
-El evaluador genera `results/task_3_errors.json` con recuentos y ejemplos de error para cada tokenizador. Este fichero describe errores de segmentación para la tarea 3 (por ejemplo, sobredimensionamiento, subsegmentación, desalineación de bordes y morfemas de referencia no disponibles) y es útil para inspeccionar dónde fracasan los modelos. **Por el momento, este repositorio no incluye el análisis interpretativo de esos errores**; el archivo generado contiene ejemplos y categorías, pero no su interpretación.
+**Solo la task 3 genera un archivo de errores.** Durante la evaluación de accuracy, `eval_task3` en [`src/morphological_evaluator.py`](src/morphological_evaluator.py) escribe `results/task_3_errors.json` para los tokenizadores del repositorio. El script de BETO ejecuta esa misma evaluación y produce `results/task_3_beto_errors.json`. Ambos incluyen recuentos y ejemplos de errores de segmentación (subsegmentación, sobresegmentación, subpalabras de referencia no disponibles y desajustes de límites). Task 1 y task 2 no generan archivos de errores. El repositorio no incluye todavía un análisis interpretativo de esos ejemplos.
 
 
 
@@ -63,7 +76,7 @@ El evaluador genera `results/task_3_errors.json` con recuentos y ejemplos de err
 ## Estructura del repositorio
 
 - [`src/`](src/): implementación de la evaluación.
-- [`src/evaluate_beto.py`](src/evaluate_beto.py): script para evaluar BETO en la tarea 3.
+- [`src/evaluate_beto.py`](src/evaluate_beto.py): script para evaluar BETO en las tareas 1, 2 y 3.
 - [`data/`](data/): conjuntos de evaluación y recursos morfológicos auxiliares.
 - [`subword_tokenizers_31/`](subword_tokenizers_31/) y [`subword_tokenizers_52/`](subword_tokenizers_52/): configuraciones y vocabularios de tokenizadores con tamaños de vocabulario de 31k y 52k.
 - [`notebooks/Train_your_tokenizer.ipynb`](notebooks/Train_your_tokenizer.ipynb): cuaderno de ejemplo para entrenar un tokenizador.

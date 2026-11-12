@@ -47,7 +47,7 @@ Los resultados se generan al ejecutar la evaluación y no están preincluidos en
 | Coherencia morfológica | `results/task_2_results.json` — resultados desglosados por tipo de morfema y tokenizador. |
 | Precisión morfológica | `results/task_3_results.json` — porcentaje de coincidencias exactas y total de casos por tokenizador. |
 
-El evaluador puede generar `results/task_3_errors.json` con recuentos y ejemplos de error para cada tokenizador. **Por el momento, este repositorio no incluye el análisis de esos errores**; el archivo generado contiene ejemplos y categorías, pero no su interpretación.
+El evaluador genera `results/task_3_errors.json` con recuentos y ejemplos de error para cada tokenizador. Este fichero describe errores de segmentación para la tarea 3 (por ejemplo, sobredimensionamiento, subsegmentación, desalineación de bordes y morfemas de referencia no disponibles) y es útil para inspeccionar dónde fracasan los modelos. **Por el momento, este repositorio no incluye el análisis interpretativo de esos errores**; el archivo generado contiene ejemplos y categorías, pero no su interpretación.
 
 
 

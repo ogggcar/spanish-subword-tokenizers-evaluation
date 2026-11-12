@@ -25,6 +25,14 @@ La lógica auxiliar para cargar datos, calcular métricas y normalizar las segme
 
 Los resultados se escriben en `results/`. El evaluador carga los conjuntos desde `data/` y construye el conjunto de coherencia combinando los ficheros JSON divididos por tipo de morfema que se encuentran en `data/2. morph_coherence/`.
 
+Para evaluar BETO ([`dccuchile/bert-base-spanish-wwm-uncased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-uncased)) en las tareas 1 y 3 y generar sus resultados y errores sin sobrescribir los de los tokenizadores del repositorio, ejecuta desde la raíz:
+
+```bash
+uv run python -m src.evaluate_beto
+```
+
+La primera ejecución descarga el tokenizador desde Hugging Face. Se generan `results/task_1_beto_results.json`, `results/task_3_beto_results.json` y `results/task_3_beto_errors.json`.
+
 ## Conjuntos de datos
 
 Los tres conjuntos de evaluación, con los nombres y ubicaciones actuales de `data/`, son:
@@ -55,6 +63,7 @@ El evaluador genera `results/task_3_errors.json` con recuentos y ejemplos de err
 ## Estructura del repositorio
 
 - [`src/`](src/): implementación de la evaluación.
+- [`src/evaluate_beto.py`](src/evaluate_beto.py): script para evaluar BETO en la tarea 3.
 - [`data/`](data/): conjuntos de evaluación y recursos morfológicos auxiliares.
 - [`subword_tokenizers_31/`](subword_tokenizers_31/) y [`subword_tokenizers_52/`](subword_tokenizers_52/): configuraciones y vocabularios de tokenizadores con tamaños de vocabulario de 31k y 52k.
 - [`notebooks/Train_your_tokenizer.ipynb`](notebooks/Train_your_tokenizer.ipynb): cuaderno de ejemplo para entrenar un tokenizador.

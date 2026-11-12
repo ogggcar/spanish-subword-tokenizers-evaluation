@@ -23,7 +23,9 @@ class MorphologicalEvaluator:
         repository_root = Path(__file__).resolve().parents[1]
         self.data_dir = data_dir or repository_root / "data"
         self.results_dir = results_dir or repository_root / "results"
-        self.tokenizers_paths = [str(Path(path).resolve()) for path in tokenizers_paths]
+        self.tokenizers_paths = [
+            str(Path(path).resolve()) if Path(path).exists() else path for path in tokenizers_paths
+        ]
 
         self.task1 = load_json(self.data_dir / "1. morph_relevance.json")
         self.task2 = load_all_json_parts(self.data_dir / "2. morph_coherence")
@@ -53,7 +55,7 @@ class MorphologicalEvaluator:
                 vocabulary.add(normalized)
         return vocabulary
 
-    def eval_task1(self) -> dict:
+    def eval_task1(self, output_prefix: str = "task_1") -> dict:
         """Evaluate morphological relevance against each tokenizer vocabulary."""
         results = {}
 
@@ -67,7 +69,7 @@ class MorphologicalEvaluator:
             }
 
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        dump_json(results, self.results_dir / "task_1_results.json")
+        dump_json(results, self.results_dir / f"{output_prefix}_results.json")
         return results
 
     def eval_task2(self) -> dict:
@@ -166,7 +168,7 @@ class MorphologicalEvaluator:
         }
         return (correct / total if total else 0.0), error_summary
 
-    def eval_task3(self) -> tuple[dict, dict]:
+    def eval_task3(self, output_prefix: str = "task_3") -> tuple[dict, dict]:
         results = {}
         all_errors = {}
 
@@ -183,8 +185,8 @@ class MorphologicalEvaluator:
             all_errors[tokenizer_name] = errors
 
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        dump_json(results, self.results_dir / "task_3_results.json")
-        dump_json(all_errors, self.results_dir / "task_3_errors.json")
+        dump_json(results, self.results_dir / f"{output_prefix}_results.json")
+        dump_json(all_errors, self.results_dir / f"{output_prefix}_errors.json")
         return results, all_errors
 
     @staticmethod

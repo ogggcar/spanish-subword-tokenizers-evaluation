@@ -23,7 +23,7 @@ Para cada tokenizador se aplican las tres medidas mediante [`src/morphological_e
 
 La lógica auxiliar para cargar datos, calcular métricas y normalizar las segmentaciones está en [`src/utils.py`](src/utils.py). Los tokenizadores guardados en las carpetas anteriores son los modelos que corresponden al estudio. Ejecuta la evaluación completa desde la raíz del repositorio con `python -m src.main` (con las dependencias de [`pyproject.toml`](pyproject.toml) instaladas).
 
-Los resultados se escriben en `results/`. El evaluador carga los conjuntos con sus nombres actuales desde `data/` y combina los JSON de `data/2. morph_coherence/`.
+Los resultados se escriben en `results/`. El evaluador carga los conjuntos desde `data/` y construye el conjunto de coherencia combinando los ficheros JSON divididos por tipo de morfema que se encuentran en `data/2. morph_coherence/`.
 
 ## Conjuntos de datos
 
@@ -32,7 +32,7 @@ Los tres conjuntos de evaluación, con los nombres y ubicaciones actuales de `da
 | Medida | Datos |
 |---|---|
 | Relevancia morfológica | [`data/1. morph_relevance.json`](data/1.%20morph_relevance.json) |
-| Coherencia morfológica | [`data/2. morph_coherence/`](data/2.%20morph_coherence/), dividido en ficheros JSON por tipo de morfema y partes. También se conserva [`data/2. morph_coherence.json`](data/2.%20morph_coherence.json) en Git LFS. |
+| Coherencia morfológica | [`data/2. morph_coherence/`](data/2.%20morph_coherence/), dividido en ficheros JSON por tipo de morfema y partes. El evaluador combina estos ficheros al ejecutarse; no se necesita un JSON agregado. |
 | Precisión morfológica | [`data/3. morph_accuracy.json`](data/3.%20morph_accuracy.json) |
 
 Como recursos auxiliares se incluyen las tablas de [`afixes.csv`](data/afixes.csv) y [`clitics.csv`](data/clitics.csv) utilizadas para la construcción del conjunto 2.

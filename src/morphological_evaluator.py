@@ -72,7 +72,7 @@ class MorphologicalEvaluator:
         dump_json(results, self.results_dir / f"{output_prefix}_results.json")
         return results
 
-    def eval_task2(self) -> dict:
+    def eval_task2(self, output_prefix: str = "task_2") -> dict:
         """Evaluate how often target morphemes remain intact after tokenization."""
         results = {}
 
@@ -113,7 +113,7 @@ class MorphologicalEvaluator:
             results[tokenizer_name] = tokenizer_results
 
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        dump_json(results, self.results_dir / "task_2_results.json")
+        dump_json(results, self.results_dir / f"{output_prefix}_results.json")
         return results
 
     def eval_tokenizer(self, path: str) -> tuple[float, dict]:

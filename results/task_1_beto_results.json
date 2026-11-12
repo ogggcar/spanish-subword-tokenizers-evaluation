@@ -1,0 +1,1 @@
+{"dccuchile/bert-base-spanish-wwm-uncased": {"prefixes": {"precision": "0.19%", "recall": "90.16%", "f1": "0.38%"}, "suffixes": {"precision": "0.00%", "recall": "0.00%", "f1": "0.00%"}, "stems": {"precision": "4.23%", "recall": "24.60%", "f1": "7.21%"}}}

@@ -25,13 +25,13 @@ La lógica auxiliar para cargar datos, calcular métricas y normalizar las segme
 
 Los resultados se escriben en `results/`. El evaluador carga los conjuntos desde `data/` y construye el conjunto de coherencia combinando los ficheros JSON divididos por tipo de morfema que se encuentran en `data/2. morph_coherence/`.
 
-Para evaluar BETO ([`dccuchile/bert-base-spanish-wwm-uncased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-uncased)) en las tareas 1 y 3 y generar sus resultados y errores sin sobrescribir los de los tokenizadores del repositorio, ejecuta desde la raíz:
+Para evaluar BETO ([`dccuchile/bert-base-spanish-wwm-uncased`](https://huggingface.co/dccuchile/bert-base-spanish-wwm-uncased)) en las tres tareas sin sobrescribir los resultados de los tokenizadores del repositorio, ejecuta desde la raíz:
 
 ```bash
 uv run python -m src.evaluate_beto
 ```
 
-La primera ejecución descarga el tokenizador desde Hugging Face. Se generan `results/task_1_beto_results.json`, `results/task_3_beto_results.json` y `results/task_3_beto_errors.json`.
+La primera ejecución descarga el tokenizador desde Hugging Face. Se generan `results/task_1_beto_results.json`, `results/task_2_beto_results.json` y `results/task_3_beto_results.json`. La tarea 3 genera además `results/task_3_beto_errors.json`; la tarea 2 genera resultados de coherencia, no un archivo de errores.
 
 ## Conjuntos de datos
 
